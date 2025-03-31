@@ -56,3 +56,83 @@ while true do
     -- Wait before checking again
     wait(1)
 end
+-- Auto-Attack Script for Shadovis RPG (Place this in a LocalScript for the player)
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local pathfindingService = game:GetService("PathfindingService")
+local enemiesFolder = workspace:WaitForChild("Enemies")  -- Assumes enemies are stored in a folder called "Enemies"
+local attackRange = 10  -- Distance within which the player can attack an enemy
+local attackCooldown = 2  -- Time in seconds before the next attack can happen
+local lastAttackTime = 0  -- To track the time of the last attack
+
+-- Function to find the closest enemy
+local function findClosestEnemy()
+    local closestEnemy = nil
+    local shortestDistance = math.huge
+
+    for _, enemy in pairs(enemiesFolder:GetChildren()) do
+        if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") then
+            local distance = (enemy.HumanoidRootPart.Position - character.HumanoidRootPart.Position).magnitude
+            if distance < shortestDistance then
+                closestEnemy = enemy
+                shortestDistance = distance
+            end
+        end
+    end
+
+    return closestEnemy
+end
+
+-- Function to attack the enemy
+local function attackEnemy(enemy)
+    if enemy and enemy:FindFirstChild("Humanoid") then
+        local enemyHumanoid = enemy.Humanoid
+
+        -- Trigger attack animation or ability (adjust for Shadovis RPG's combat system)
+        -- For example, if there's a "BasicAttack" animation for Shadovis RPG:
+        local attackAnimation = character:FindFirstChild("BasicAttackAnimation")  -- Replace with your actual attack animation
+        if attackAnimation then
+            humanoid:LoadAnimation(attackAnimation):Play()
+        end
+
+        -- Deal damage (adjust this for Shadovis RPG's combat and health system)
+        local damage = 20  -- Replace with the actual attack damage for Shadovis RPG
+        if enemyHumanoid.Health > 0 then
+            enemyHumanoid:TakeDamage(damage)
+        end
+    end
+end
+
+-- Main loop to keep looking for the nearest enemy and attack if in range
+while true do
+    local closestEnemy = findClosestEnemy()
+    local currentTime = tick()
+
+    if closestEnemy then
+        local distance = (closestEnemy.HumanoidRootPart.Position - character.HumanoidRootPart.Position).magnitude
+
+        if distance <= attackRange then
+            -- If within attack range and cooldown has passed, attack
+            if currentTime - lastAttackTime >= attackCooldown then
+                attackEnemy(closestEnemy)
+                lastAttackTime = currentTime  -- Update the last attack time
+            end
+        else
+            -- Move towards the closest enemy if out of range
+            local path = pathfindingService:CreatePath({
+                AgentRadius = 2,
+                AgentHeight = 5,
+                AgentCanJump = true,
+                AgentJumpHeight = 10,
+                AgentMaxSlope = 45,
+            })
+
+            path:ComputeAsync(character.HumanoidRootPart.Position, closestEnemy.HumanoidRootPart.Position)
+            path:MoveTo(character)
+        end
+    end
+
+    -- Wait a short time before checking again
+    wait(0.5)
+end
