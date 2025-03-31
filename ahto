@@ -1,0 +1,58 @@
+-- Auto Targeting Script (Place this in a LocalScript for the player)
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local pathfindingService = game:GetService("PathfindingService")
+local enemiesFolder = workspace:WaitForChild("Enemies")  -- Assumes enemies are stored in a folder called "Enemies"
+local targetDistance = 50  -- How close the player has to be to consider it an enemy to go after
+local moveSpeed = 16  -- Speed at which the player moves towards enemies
+
+-- Function to find the closest enemy
+local function findClosestEnemy()
+    local closestEnemy = nil
+    local shortestDistance = math.huge
+
+    for _, enemy in pairs(enemiesFolder:GetChildren()) do
+        if enemy:FindFirstChild("HumanoidRootPart") then
+            local distance = (enemy.HumanoidRootPart.Position - character.HumanoidRootPart.Position).magnitude
+            if distance < shortestDistance then
+                closestEnemy = enemy
+                shortestDistance = distance
+            end
+        end
+    end
+
+    return closestEnemy
+end
+
+-- Function to move towards the closest enemy
+local function moveToEnemy(enemy)
+    if enemy and enemy:FindFirstChild("HumanoidRootPart") then
+        local targetPosition = enemy.HumanoidRootPart.Position
+        local path = pathfindingService:CreatePath({
+            AgentRadius = 2,
+            AgentHeight = 5,
+            AgentCanJump = true,
+            AgentJumpHeight = 10,
+            AgentMaxSlope = 45,
+        })
+
+        path:ComputeAsync(character.HumanoidRootPart.Position, targetPosition)
+        path:MoveTo(character)
+    end
+end
+
+-- Main loop to keep looking for the nearest enemy
+while true do
+    local closestEnemy = findClosestEnemy()
+
+    if closestEnemy then
+        local distance = (closestEnemy.HumanoidRootPart.Position - character.HumanoidRootPart.Position).magnitude
+        if distance < targetDistance then
+            moveToEnemy(closestEnemy)
+        end
+    end
+
+    -- Wait before checking again
+    wait(1)
+end
